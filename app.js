@@ -73,7 +73,9 @@
   function empty(message) { return `<div class="empty">${message}</div>`; }
   function header(eyebrow,title,subtitle) { return `<p class="eyebrow">${eyebrow}</p><h1 class="title">${title}</h1><p class="subtitle">${subtitle}</p>`; }
   function noData() {
-    return `<div class="card"><h2>ابدأ بنقل بياناتك</h2><p>استورد ملف JSON من Aureva Desk الحالي. النسخة دي بتحتفظ بالبيانات على جهازك وتفتح بسرعة حتى بدون إنترنت.</p><button class="primary" data-action="import">استيراد بيانات Aureva</button></div>`;
+    return connection
+      ? `<div class="card"><h2>الحجوزات لسه ما ظهرتش</h2><p>اتأكد من الإنترنت وحدّث الشيتات. التطبيق هيحتفظ بآخر بيانات ناجحة على جهازك.</p><button class="primary" data-action="refresh">تحديث الحجوزات</button></div>`
+      : `<div class="card"><h2>ابدأ تجهيز التطبيق</h2><p>اختَر ملف تجهيز Aureva الخاص بك مرة واحدة. حجوزاتك هتظهر هنا وتتحدث من الشيت لما تفتح التطبيق.</p><button class="primary" data-action="connect">اختيار ملف التجهيز</button></div>`;
   }
   function renderToday() {
     const bookings = liveBookings();
