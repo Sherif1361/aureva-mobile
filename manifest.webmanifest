@@ -4,7 +4,7 @@
   "description": "إدارة الإقامات والشقق على الموبايل",
   "lang": "ar",
   "dir": "rtl",
-  "start_url": "./",
+  "start_url": "./?v=10",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f5f6f4",
