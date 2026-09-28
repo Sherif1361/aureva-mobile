@@ -1,15 +1,28 @@
 (() => {
   'use strict';
   const KEY = 'aureva-mobile-state-v1';
+  const CONNECTION_KEY = 'aureva-mobile-connection-v1';
   const today = new Intl.DateTimeFormat('en-CA', {timeZone: 'Africa/Cairo', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
   const fmtDate = new Intl.DateTimeFormat('ar-EG', {day:'numeric', month:'short', timeZone:'UTC'});
   const main = document.getElementById('main');
   const fileInput = document.getElementById('import-file');
+  const connectionInput = document.getElementById('connection-file');
+  const modeButton = document.getElementById('mode');
   const defaults = {v:2, rate:50.8, apartments:[], bookings:[], updatedAt:''};
   let data = load();
+  let connection = loadConnection();
   let tab = 'today';
   let filter = 'upcoming';
   let search = '';
+  let refreshing = false;
+  let lastFailures = 0;
+
+  function loadConnection() {
+    try {
+      const value = JSON.parse(localStorage.getItem(CONNECTION_KEY) || 'null');
+      return window.AurevaLive.validConnection(value) ? value : null;
+    } catch { return null; }
+  }
 
   function load() {
     try {
@@ -68,7 +81,11 @@
     const arriving = bookings.filter(b => b.from === today);
     const leaving = bookings.filter(b => b.to === today);
     const upcoming = bookings.filter(b => b.from > today).sort((a,b) => a.from.localeCompare(b.from));
-    return header('مكتب Aureva','إقاماتك','نسخة محفوظة على هذا الجهاز؛ راجع الشيت لأحدث الحجوزات.') +
+    const sourceText = connection
+      ? `آخر سحب من الشيت: ${data.updatedAt ? esc(new Date(data.updatedAt).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'})) : 'لم يتم بعد'}`
+      : 'اربط الشيت علشان الحجوزات تتحدث تلقائيًا.';
+    return header('مكتب Aureva','إقاماتك',sourceText) +
+      (connection ? `<button type="button" class="refresh-button" data-action="refresh" ${refreshing?'disabled':''}>${refreshing?'جاري تحديث الحجوزات…':'↻ تحديث الحجوزات الآن'}</button>` : '') +
       `<div class="hero"><div class="label">الإقامات الجارية</div><div class="value">${active.length}</div><div class="foot">${arriving.length} وصول اليوم · ${leaving.length} مغادرة اليوم</div></div>
        <div class="stats"><div class="stat"><div class="label">الشقق</div><div class="value">${data.apartments.length}</div></div><div class="stat"><div class="label">الحجوزات القادمة</div><div class="value">${upcoming.length}</div></div></div>` +
       (data.apartments.length ? `<div class="section-head"><h2>القادم</h2><span class="count">أقرب 5 حجوزات</span></div><div class="list">${upcoming.slice(0,5).map(stayCard).join('') || empty('لا توجد حجوزات قادمة في البيانات المحفوظة.')}</div>` : noData());
@@ -86,21 +103,23 @@
        <div class="section-head"><h2>النتائج</h2><span class="count">${rows.length} حجز</span></div><div class="list">${rows.slice(0,250).map(stayCard).join('') || empty('لا توجد حجوزات مطابقة.')}</div>`;
   }
   function renderFlats() {
-    const rows = data.apartments.filter(a => a.sec === 'my' || a.sec === 'cohost');
+    const rows = data.apartments.slice().sort((a,b) => ({my:0,beetak:1,cohost:2}[a.sec] ?? 3) - ({my:0,beetak:1,cohost:2}[b.sec] ?? 3) || a.name.localeCompare(b.name));
     const bookings = liveBookings();
+    const linked = new Set(connection ? window.AurevaLive.targets(connection).flatMap(t => t.aptId ? [t.aptId] : connection.apartments.filter(a => a.sec === t.section).map(a => a.id)) : []);
     return header('الوحدات','الشقق','حالة كل شقة والحجوزات المسجلة لها.') +
       `<div class="list">${rows.map(a => {
         const stays = bookings.filter(b => b.apt === a.id);
         const current = stays.find(b => b.from <= today && b.to > today);
         const next = stays.filter(b => b.from > today).sort((x,y)=>x.from.localeCompare(y.from))[0];
-        return `<article class="flat"><div class="flat-top"><div class="name">${esc(a.name)}</div><span class="pill ${current?'in':'next'}">${current?'مشغولة':'متاحة'}</span></div><div class="meta">${esc(a.area || '')}</div><div class="flat-row"><span>${stays.length} إقامة مسجلة</span><strong>${current?'حتى '+date(current.to):next?'القادم '+date(next.from):'لا يوجد حجز قادم'}</strong></div></article>`;
+        return `<article class="flat"><div class="flat-top"><div class="name">${esc(a.name)}</div><span class="pill ${current?'in':'next'}">${current?'مشغولة':'متاحة'}</span></div><div class="meta">${esc(({my:'شققك',beetak:'Beetak',cohost:'Co-hosts'}[a.sec] || a.sec || '') + (a.area?' · '+a.area:''))}</div><div class="flat-row"><span>${stays.length} إقامة مسجلة · ${linked.has(a.id)||a.id.startsWith('beetak:')?'متصل بالشيت':'نسخة الجهاز'}</span><strong>${current?'حتى '+date(current.to):next?'القادم '+date(next.from):'لا يوجد حجز قادم'}</strong></div></article>`;
       }).join('') || empty('لا توجد شقق في البيانات المحفوظة.')}</div>`;
   }
   function renderSettings() {
     return header('تفضيلاتك','الإعدادات','بياناتك محفوظة على هذا الجهاز.') +
+      `<div class="card"><h2>تحديث مباشر من الشيت</h2><p>${connection?'الاتصال محفوظ على هذا الجهاز. التطبيق يسحب الحجوزات عند الفتح، وتقدر تحدثها يدويًا.':'استورد ملف اتصال Aureva الخاص بك مرة واحدة لتحديث الحجوزات مباشرة من Google Sheets.'}</p><button class="primary" data-action="connect">${connection?'تغيير ملف الاتصال':'ربط الشيت'}</button>${connection?`<button class="secondary connection-refresh" data-action="refresh" ${refreshing?'disabled':''}>${refreshing?'جاري التحديث…':'تحديث الآن'}</button>`:''}${lastFailures?`<p class="note danger">${lastFailures} شيت لم يرد في آخر محاولة؛ بياناته القديمة محفوظة.</p>`:''}</div>` +
       `<div class="card"><h2>استيراد بياناتك</h2><p>احفظ ملف Aureva JSON الخاص بك في تطبيق الملفات على iPhone، ثم اختَره هنا. الاستيراد يستبدل النسخة المحلية على هذا الجهاز فقط.</p><button class="primary" data-action="import">اختيار ملف JSON</button></div>
        <div class="card"><h2>نسخة احتياطية</h2><p>${data.updatedAt?'آخر تحديث في الملف: '+esc(data.updatedAt.slice(0,16).replace('T',' ')):'لم يتم استيراد بيانات بعد.'}</p><button class="secondary" data-action="export">تنزيل نسخة من البيانات</button></div>
-       <div class="card"><h2>التثبيت على iPhone</h2><p>افتح رابط التطبيق من Safari، ثم مشاركة ← إضافة إلى الشاشة الرئيسية. سيظهر بأيقونة Aureva ويفتح بملء الشاشة.</p><p class="note">النسخة الحالية للعرض السريع على الجهاز. مزامنة الشيت التلقائية لم تُنقل إليها بعد؛ راجع الشيت قبل أي قرار مالي.</p></div>`;
+       <div class="card"><h2>التثبيت على iPhone</h2><p>من Safari اختَر مشاركة ← إضافة إلى الشاشة الرئيسية، وفعّل «فتح كتطبيق». بعد التثبيت افتحه من أيقونة Aureva.</p><p class="note">الحجوزات للعرض، وتحديثها يعتمد على الشيتات المتصلة. الشقق غير المرتبطة تظل من النسخة المحفوظة.</p></div>`;
   }
   function render() {
     main.innerHTML = ({today:renderToday,stays:renderStays,flats:renderFlats,settings:renderSettings}[tab] || renderToday)();
@@ -109,6 +128,19 @@
       button.classList.toggle('active', active);
       button.setAttribute('aria-current', active ? 'page' : 'false');
     });
+    modeButton.textContent = refreshing ? '↻ جاري التحديث' : connection ? (lastFailures ? 'تحديث جزئي' : '↻ متصل بالشيت') : 'نسخة الجهاز';
+  }
+
+  async function refreshLive() {
+    if (!connection || refreshing) return;
+    refreshing = true; render();
+    try {
+      const result = await window.AurevaLive.refresh(connection, data);
+      lastFailures = result.failures.length;
+      save(result.data);
+      toast(lastFailures ? `تم تحديث بعض الشيتات، وتعذر تحديث ${lastFailures}.` : 'الحجوزات محدثة من الشيت.');
+    } catch (error) { toast(error.message || 'تعذر تحديث الحجوزات.'); }
+    finally { refreshing = false; render(); }
   }
   function toast(message) {
     document.querySelector('.notice')?.remove();
@@ -123,6 +155,8 @@
     if (target.dataset.tab) { tab = target.dataset.tab; render(); window.scrollTo(0,0); }
     if (target.dataset.filter) { filter = target.dataset.filter; render(); }
     if (target.dataset.action === 'import') fileInput.click();
+    if (target.dataset.action === 'connect') connectionInput.click();
+    if (target.dataset.action === 'refresh') refreshLive();
     if (target.dataset.action === 'export') {
       const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
       const url = URL.createObjectURL(blob);
@@ -149,6 +183,25 @@
     } catch { toast('ملف JSON غير صالح لبيانات Aureva.'); }
     finally { fileInput.value = ''; }
   });
+  connectionInput.addEventListener('change', async () => {
+    const file = connectionInput.files[0];
+    if (!file) return;
+    if (file.size > 100_000) { toast('ملف الاتصال كبير جدًا.'); return; }
+    try {
+      const incoming = JSON.parse(await file.text());
+      if (!window.AurevaLive.validConnection(incoming)) throw new Error('invalid');
+      localStorage.setItem(CONNECTION_KEY, JSON.stringify(incoming));
+      connection = incoming;
+      if (!data.apartments.length) save({...data,apartments:incoming.apartments.map(a => ({id:a.id,sec:a.sec,name:a.name,code:a.code||'',area:''}))});
+      render();
+      refreshLive();
+    } catch { toast('ملف اتصال Aureva غير صالح.'); }
+    finally { connectionInput.value = ''; }
+  });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   render();
+  if (connection) refreshLive();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && connection && !refreshing && (!data.updatedAt || Date.now() - new Date(data.updatedAt).getTime() > 10 * 60 * 1000)) refreshLive();
+  });
 })();
