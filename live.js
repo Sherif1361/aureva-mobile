@@ -64,15 +64,20 @@
   }
 
   async function pullTarget(config, target, fetcher = fetch) {
-    const response = await fetcher(config.url, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({secret:config.secret || '',action:'pull',data:{sheetId:target.sheetId,tab:target.tab}}),
-    });
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const body = await response.json();
-    if (!body || body.ok !== true || !Array.isArray(body.rows)) throw new Error('Bridge rejected pull');
-    return body.rows.map(row => bookingFromRow(row, target, config)).filter(Boolean);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+    try {
+      const response = await fetcher(config.url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({secret:config.secret || '',action:'pull',data:{sheetId:target.sheetId,tab:target.tab}}),
+        signal:controller.signal,
+      });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const body = await response.json();
+      if (!body || body.ok !== true || !Array.isArray(body.rows)) throw new Error('Bridge rejected pull');
+      return body.rows.map(row => bookingFromRow(row, target, config)).filter(Boolean);
+    } finally { clearTimeout(timeout); }
   }
 
   async function refresh(config, current, fetcher = fetch) {

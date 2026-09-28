@@ -128,7 +128,7 @@
       button.classList.toggle('active', active);
       button.setAttribute('aria-current', active ? 'page' : 'false');
     });
-    modeButton.textContent = refreshing ? '↻ جاري التحديث' : connection ? (lastFailures ? 'تحديث جزئي' : '↻ متصل بالشيت') : 'نسخة الجهاز';
+    modeButton.textContent = refreshing ? '↻ جاري التحديث' : connection ? (lastFailures === window.AurevaLive.targets(connection).length ? 'تعذر التحديث' : lastFailures ? 'تحديث جزئي' : '↻ متصل بالشيت') : 'نسخة الجهاز';
   }
 
   async function refreshLive() {
@@ -139,7 +139,10 @@
       lastFailures = result.failures.length;
       save(result.data);
       toast(lastFailures ? `تم تحديث بعض الشيتات، وتعذر تحديث ${lastFailures}.` : 'الحجوزات محدثة من الشيت.');
-    } catch (error) { toast(error.message || 'تعذر تحديث الحجوزات.'); }
+    } catch (error) {
+      lastFailures = window.AurevaLive.targets(connection).length;
+      toast(error.message || 'تعذر تحديث الحجوزات.');
+    }
     finally { refreshing = false; render(); }
   }
   function toast(message) {
