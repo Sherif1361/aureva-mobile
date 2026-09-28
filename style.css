@@ -38,7 +38,7 @@ body { padding-bottom: calc(105px + env(safe-area-inset-bottom)); }
 main { padding: 25px 16px 34px; }
 .eyebrow { margin: 0 0 7px; color: #3e806c; font-size: 12px; font-weight: 800; }
 .title { margin: 0 0 7px; font-size: 32px; line-height: 1.2; letter-spacing: -.045em; }
-.subtitle { margin: 0 0 22px; color: #758a80; font-size: 13px; line-height: 1.65; }
+.subtitle { margin: 0 0 22px; color: #60766b; font-size: 13px; line-height: 1.65; }
 
 .hero {
   position: relative; overflow: hidden; margin-bottom: 12px; padding: 25px 23px 24px;
@@ -71,7 +71,7 @@ main { padding: 25px 16px 34px; }
 .datebox span { display: block; font-size: 10px; }
 .stay-main { min-width: 0; }
 .name { font-size: 14px; font-weight: 800; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.meta { margin-top: 4px; color: #87968e; font-size: 11px; line-height: 1.35; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.meta { margin-top: 4px; color: #657b6f; font-size: 11px; line-height: 1.35; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .amount { margin-top: 9px; color: #214c3d; font-size: 12px; font-weight: 800; direction: ltr; text-align: right; white-space: nowrap; }
 .pill { display: inline-block; padding: 6px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
 .pill.in { color: #16774b; background: #e3f4e9; }
@@ -92,7 +92,7 @@ main { padding: 25px 16px 34px; }
 .flat-row strong { color: #315e4a; font-weight: 750; text-align: left; }
 .card { padding: 19px; margin-bottom: 12px; }
 .card h2 { margin: 0 0 9px; font-size: 16px; }
-.card p { margin: 0 0 14px; color: #778b80; font-size: 12px; line-height: 1.75; }
+.card p { margin: 0 0 14px; color: #60776a; font-size: 12px; line-height: 1.75; }
 .primary, .secondary, .refresh-button { width: 100%; padding: 13px 16px; border: 0; border-radius: 14px; font-size: 13px; font-weight: 800; }
 .primary { background: #0d6455; color: #fff; box-shadow: 0 8px 16px -12px #0d6455; }
 .secondary { background: #ebf4ed; color: #155e4d; }

@@ -1,4 +1,4 @@
-const CACHE = 'aureva-mobile-v4';
+const CACHE = 'aureva-mobile-v5';
 const SHELL = ['./', './index.html', './style.css', './live.js', './app.js', './manifest.webmanifest', './icon.svg', './icon-180.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));

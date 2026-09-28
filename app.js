@@ -116,7 +116,7 @@
   }
   function renderSettings() {
     return header('تفضيلاتك','الإعدادات','بياناتك محفوظة على هذا الجهاز.') +
-      `<div class="card"><h2>تحديث مباشر من الشيت</h2><p>${connection?'الاتصال محفوظ على هذا الجهاز. التطبيق يسحب الحجوزات عند الفتح، وتقدر تحدثها يدويًا.':'استورد ملف اتصال Aureva الخاص بك مرة واحدة لتحديث الحجوزات مباشرة من Google Sheets.'}</p><button class="primary" data-action="connect">${connection?'تغيير ملف الاتصال':'ربط الشيت'}</button>${connection?`<button class="secondary connection-refresh" data-action="refresh" ${refreshing?'disabled':''}>${refreshing?'جاري التحديث…':'تحديث الآن'}</button>`:''}${lastFailures?`<p class="note danger">${lastFailures} شيت لم يرد في آخر محاولة؛ بياناته القديمة محفوظة.</p>`:''}</div>` +
+      `<div class="card"><h2>تحديث مباشر من الشيت</h2><p>${connection?'التطبيق يسحب الحجوزات عند الفتح، وتقدر تحدثها يدويًا.':'اختَر ملف تجهيز Aureva الخاص بك مرة واحدة. هيظهر سجل حجوزاتك ويتصل بالشيتات تلقائيًا.'}</p><button class="primary" data-action="connect">${connection?'تغيير ملف التجهيز':'تجهيز التطبيق'}</button>${connection?`<button class="secondary connection-refresh" data-action="refresh" ${refreshing?'disabled':''}>${refreshing?'جاري التحديث…':'تحديث الآن'}</button>`:''}${lastFailures?`<p class="note danger">${lastFailures} شيت لم يرد في آخر محاولة؛ بياناته القديمة محفوظة.</p>`:''}</div>` +
       `<div class="card"><h2>استيراد بياناتك</h2><p>احفظ ملف Aureva JSON الخاص بك في تطبيق الملفات على iPhone، ثم اختَره هنا. الاستيراد يستبدل النسخة المحلية على هذا الجهاز فقط.</p><button class="primary" data-action="import">اختيار ملف JSON</button></div>
        <div class="card"><h2>نسخة احتياطية</h2><p>${data.updatedAt?'آخر تحديث في الملف: '+esc(data.updatedAt.slice(0,16).replace('T',' ')):'لم يتم استيراد بيانات بعد.'}</p><button class="secondary" data-action="export">تنزيل نسخة من البيانات</button></div>
        <div class="card"><h2>التثبيت على iPhone</h2><p>من Safari اختَر مشاركة ← إضافة إلى الشاشة الرئيسية، وفعّل «فتح كتطبيق». بعد التثبيت افتحه من أيقونة Aureva.</p><p class="note">الحجوزات للعرض، وتحديثها يعتمد على الشيتات المتصلة. الشقق غير المرتبطة تظل من النسخة المحفوظة.</p></div>`;
@@ -186,16 +186,19 @@
   connectionInput.addEventListener('change', async () => {
     const file = connectionInput.files[0];
     if (!file) return;
-    if (file.size > 100_000) { toast('ملف الاتصال كبير جدًا.'); return; }
+    if (file.size > 5_000_000) { toast('ملف التجهيز كبير جدًا.'); return; }
     try {
       const incoming = JSON.parse(await file.text());
-      if (!window.AurevaLive.validConnection(incoming)) throw new Error('invalid');
-      localStorage.setItem(CONNECTION_KEY, JSON.stringify(incoming));
-      connection = incoming;
-      if (!data.apartments.length) save({...data,apartments:incoming.apartments.map(a => ({id:a.id,sec:a.sec,name:a.name,code:a.code||'',area:''}))});
+      const nextConnection = incoming.connection || incoming;
+      if (!window.AurevaLive.validConnection(nextConnection) || (incoming.data && !valid(incoming.data))) throw new Error('invalid');
+      if (incoming.data && !confirm(`تجهيز التطبيق بـ${incoming.data.apartments.length} شقة و${incoming.data.bookings.length} حجز، واستبدال النسخة المحلية؟`)) return;
+      localStorage.setItem(CONNECTION_KEY, JSON.stringify(nextConnection));
+      connection = nextConnection;
+      if (incoming.data) save(incoming.data);
+      else if (!data.apartments.length) save({...data,apartments:nextConnection.apartments.map(a => ({id:a.id,sec:a.sec,name:a.name,code:a.code||'',area:''}))});
       render();
       refreshLive();
-    } catch { toast('ملف اتصال Aureva غير صالح.'); }
+    } catch { toast('ملف تجهيز Aureva غير صالح.'); }
     finally { connectionInput.value = ''; }
   });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
