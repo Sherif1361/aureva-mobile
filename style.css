@@ -98,6 +98,11 @@ main { padding: 25px 16px 34px; }
 .secondary { background: #ebf4ed; color: #155e4d; }
 .connection-refresh { margin-top: 9px; }
 .refresh-button { margin: -7px 0 17px; border: 1px solid #d5e9df; background: #eaf4ee; color: #1a6b53; }
+.review-banner { width: 100%; margin: -5px 0 15px; padding: 12px 14px; border: 1px solid #efdcbf; border-radius: 14px; background: #fff5e7; color: #8e5a26; text-align: right; font-size: 12px; font-weight: 800; }
+.review-card { border-color: #efdfc9; background: #fffaf4; }
+.review-row { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #f0e4d4; padding: 10px 0; font-size: 11px; }
+.review-row strong { color: #66503a; }
+.review-row span { color: #8b7254; text-align: left; }
 .primary:active, .secondary:active, .refresh-button:active, .filter:active { transform: scale(.985); }
 .note { font-size: 12px; color: #87968c; line-height: 1.6; }
 .danger { color: #b0534b !important; }

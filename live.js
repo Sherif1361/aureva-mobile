@@ -90,6 +90,19 @@
       ? [target.aptId]
       : config.apartments.filter(a => a.sec === target.section).map(a => a.id)));
     successful.flatMap(item => item.rows).forEach(booking => refreshedApts.add(booking.apt));
+    const liveRows = successful.flatMap(item => item.rows);
+    const cairoToday = new Intl.DateTimeFormat('en-CA', {timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+    const reviewCandidates = [...(current.bookings || []), ...(current.review || [])]
+      .filter(booking => refreshedApts.has(booking.apt) && booking.to >= cairoToday
+        && !BAD_STATUS.test(asText(booking.status)) && (booking.code || asAmount(booking.amount)));
+    const review = reviewCandidates.filter(booking => !liveRows.some(row => row.apt === booking.apt
+      && row.from === booking.from && row.to === booking.to
+      && (!row.code || !booking.code || row.code === booking.code)))
+      .filter((booking, index, all) => all.findIndex(other => other.apt === booking.apt
+        && other.from === booking.from && other.to === booking.to) === index)
+      .map(booking => ({id:booking.id,apt:booking.apt,guest:booking.guest,
+        from:booking.from,to:booking.to,platform:booking.platform,amount:booking.amount,
+        cur:booking.cur,code:booking.code}));
     const apartments = Array.isArray(current.apartments) && current.apartments.length
       ? current.apartments.slice() : config.apartments.map(a => ({id:a.id,sec:a.sec,name:a.name,code:a.code||'',area:''}));
     successful.flatMap(item => item.rows).forEach(booking => {
@@ -101,9 +114,9 @@
     });
     const bookings = [
       ...(current.bookings || []).filter(b => !refreshedApts.has(b.apt)),
-      ...successful.flatMap(item => item.rows),
+      ...liveRows,
     ];
-    return {data:{...current,apartments,bookings,updatedAt:new Date().toISOString()},
+    return {data:{...current,apartments,bookings,review,updatedAt:new Date().toISOString()},
       refreshedApts:[...refreshedApts], failures};
   }
 

@@ -88,6 +88,7 @@
       : 'اربط الشيت علشان الحجوزات تتحدث تلقائيًا.';
     return header('مكتب Aureva','إقاماتك',sourceText) +
       (connection ? `<button type="button" class="refresh-button" data-action="refresh" ${refreshing?'disabled':''}>${refreshing?'جاري تحديث الحجوزات…':'↻ تحديث الحجوزات الآن'}</button>` : '') +
+      ((data.review || []).length ? `<button type="button" class="review-banner" data-tab="settings">${data.review.length} إقامة في النسخة القديمة مش موجودة بالشيت · راجعها</button>` : '') +
       `<div class="hero"><div class="label">الإقامات الجارية</div><div class="value">${active.length}</div><div class="foot">${arriving.length} وصول اليوم · ${leaving.length} مغادرة اليوم</div></div>
        <div class="stats"><div class="stat"><div class="label">الشقق</div><div class="value">${data.apartments.length}</div></div><div class="stat"><div class="label">الحجوزات القادمة</div><div class="value">${upcoming.length}</div></div></div>` +
       (data.apartments.length ? `<div class="section-head"><h2>القادم</h2><span class="count">أقرب 5 حجوزات</span></div><div class="list">${upcoming.slice(0,5).map(stayCard).join('') || empty('لا توجد حجوزات قادمة في البيانات المحفوظة.')}</div>` : noData());
@@ -118,6 +119,7 @@
   }
   function renderSettings() {
     return header('تفضيلاتك','الإعدادات','بياناتك محفوظة على هذا الجهاز.') +
+      ((data.review || []).length ? `<div class="card review-card"><h2>إقامات تحتاج مراجعة</h2><p>كانت في النسخة القديمة، لكن مش موجودة في الشيت الآن. مش محسوبة ضمن الإقامات المؤكدة.</p>${data.review.map(b => `<div class="review-row"><strong>${esc(apt(b.apt)?.name || 'شقة')}</strong><span>${esc(b.guest || b.platform || 'حجز')} · ${esc(date(b.from))} ← ${esc(date(b.to))}</span></div>`).join('')}</div>` : '') +
       `<div class="card"><h2>تحديث مباشر من الشيت</h2><p>${connection?'التطبيق يسحب الحجوزات عند الفتح، وتقدر تحدثها يدويًا.':'اختَر ملف تجهيز Aureva الخاص بك مرة واحدة. هيظهر سجل حجوزاتك ويتصل بالشيتات تلقائيًا.'}</p><button class="primary" data-action="connect">${connection?'تغيير ملف التجهيز':'تجهيز التطبيق'}</button>${connection?`<button class="secondary connection-refresh" data-action="refresh" ${refreshing?'disabled':''}>${refreshing?'جاري التحديث…':'تحديث الآن'}</button>`:''}${lastFailures?`<p class="note danger">${lastFailures} شيت لم يرد في آخر محاولة؛ بياناته القديمة محفوظة.</p>`:''}</div>` +
       `<div class="card"><h2>استيراد بياناتك</h2><p>احفظ ملف Aureva JSON الخاص بك في تطبيق الملفات على iPhone، ثم اختَره هنا. الاستيراد يستبدل النسخة المحلية على هذا الجهاز فقط.</p><button class="primary" data-action="import">اختيار ملف JSON</button></div>
        <div class="card"><h2>نسخة احتياطية</h2><p>${data.updatedAt?'آخر تحديث في الملف: '+esc(data.updatedAt.slice(0,16).replace('T',' ')):'لم يتم استيراد بيانات بعد.'}</p><button class="secondary" data-action="export">تنزيل نسخة من البيانات</button></div>
